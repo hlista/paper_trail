@@ -2,31 +2,37 @@
 # and its dependencies with the aid of the Mix.Config module.
 import Config
 
-# config :paper_trail, ecto_repos: []
-# This configuration is loaded before any dependency and is restricted
-# to this project. If another project depends on this project, this
-# file won't be loaded nor affect the parent project. For this reason,
-# if you want to provide default values for your application for
-# 3rd-party users, it should be done in your "mix.exs" file.
+if Mix.env() === :test do
 
-# You can configure for your application as:
-#
-#     config :paper_trail, key: :value
-#
-# And access this configuration in your application as:
-#
-#     Application.get_env(:paper_trail, :key)
-#
-# Or configure a 3rd-party app:
-#
-#     config :logger, level: :info
-#
+config :paper_trail,
+  ecto_repos: [PaperTrail.Repo, PaperTrail.UUIDRepo, PaperTrail.UUIDWithCustomNameRepo]
 
-# It is also possible to import configuration files, relative to this
-# directory. For example, you can emulate configuration per environment
-# by uncommenting the line below and defining dev.exs, test.exs and such.
-# Configuration from the imported file will override the ones defined
-# here (which is why it is important to import them last).
-#
+config :paper_trail, repo: PaperTrail.Repo, originator: [name: :user, model: User]
 
-import_config "#{Mix.env()}.exs"
+config :paper_trail, PaperTrail.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  username: System.get_env("POSTGRES_USER"),
+  password: System.get_env("POSTGRES_PASSWORD"),
+  database: "paper_trail_test",
+  hostname: System.get_env("PG_HOST"),
+  poolsize: 10
+
+config :paper_trail, PaperTrail.UUIDRepo,
+  adapter: Ecto.Adapters.Postgres,
+  username: System.get_env("POSTGRES_USER"),
+  password: System.get_env("POSTGRES_PASSWORD"),
+  database: "paper_trail_uuid_test",
+  hostname: System.get_env("PG_HOST"),
+  poolsize: 10
+
+config :paper_trail, PaperTrail.UUIDWithCustomNameRepo,
+  adapter: Ecto.Adapters.Postgres,
+  username: System.get_env("POSTGRES_USER"),
+  password: System.get_env("POSTGRES_PASSWORD"),
+  database: "paper_trail_uuid_with_custom_name_test",
+  hostname: System.get_env("PG_HOST"),
+  poolsize: 10
+
+config :logger, level: :warn
+
+end

@@ -3,7 +3,7 @@ defmodule PaperTrail.Serializer do
   Serialization functions to create a version struct
   """
 
-  alias PaperTrail.RepoClient
+  alias PaperTrail.Opt
   alias PaperTrail.Version
 
   @type model :: struct() | Ecto.Changeset.t()
@@ -13,86 +13,87 @@ defmodule PaperTrail.Serializer do
   @doc """
   Creates a version struct for a model and a specific changeset action
   """
-  @spec make_version_struct(map(), model(), options()) :: Version.t()
-  def make_version_struct(%{event: "insert"}, model, options) do
-    originator = RepoClient.originator()
-    originator_ref = options[originator[:name]] || options[:originator]
+  @spec make_version_struct(model(), :insert | :update | :delete, options()) :: Version.t()
+  def make_version_struct(model, :insert, options) do
+    originator = Opt.originator(options)
+    originator_ref =
+      case Keyword.get(options, originator[:name], originator) do
+        nil -> originator
+        ref -> ref
+      end
 
-    %Version{
+    options
+    |> Opt.version_schema()
+    |> struct!(%{
       event: "insert",
       item_type: get_item_type(model),
-      item_id: get_model_id(model),
+      item_id: get_model_id(model, options),
       item_changes: serialize(model),
-      originator_id:
-        case originator_ref do
-          nil -> nil
-          %{id: id} -> id
-          model when is_struct(model) -> get_model_id(originator_ref)
-        end,
+      originator_id: get_originator_id(originator_ref, options),
       origin: options[:origin],
       meta: options[:meta]
-    }
+    })
     |> add_prefix(options[:prefix])
   end
 
-  def make_version_struct(%{event: "update"}, changeset, options) do
-    originator = RepoClient.originator()
+  def make_version_struct(changeset, :update, options) do
+    originator = Opt.originator()
     originator_ref = options[originator[:name]] || options[:originator]
 
     %Version{
       event: "update",
       item_type: get_item_type(changeset),
-      item_id: get_model_id(changeset),
+      item_id: get_model_id(changeset, options),
       item_changes: serialize_changes(changeset),
-      originator_id:
-        case originator_ref do
-          nil -> nil
-          %{id: id} -> id
-          model when is_struct(model) -> get_model_id(originator_ref)
-        end,
+      originator_id: get_originator_id(originator_ref, options),
       origin: options[:origin],
       meta: options[:meta]
     }
     |> add_prefix(options[:prefix])
   end
 
-  def make_version_struct(%{event: "delete"}, model_or_changeset, options) do
-    originator = RepoClient.originator()
+  def make_version_struct(model_or_changeset, :delete, options) do
+    originator = Opt.originator()
     originator_ref = options[originator[:name]] || options[:originator]
 
     %Version{
       event: "delete",
       item_type: get_item_type(model_or_changeset),
-      item_id: get_model_id(model_or_changeset),
+      item_id: get_model_id(model_or_changeset, options),
       item_changes: serialize(model_or_changeset),
-      originator_id:
-        case originator_ref do
-          nil -> nil
-          %{id: id} -> id
-          model when is_struct(model) -> get_model_id(originator_ref)
-        end,
+      originator_id: get_originator_id(originator_ref, options),
       origin: options[:origin],
       meta: options[:meta]
     }
     |> add_prefix(options[:prefix])
   end
 
+  defp get_originator_id(originator_ref, options) do
+    case originator_ref do
+      nil -> nil
+      %{id: id} -> id
+      model when is_struct(model) -> get_model_id(originator_ref, options)
+    end
+  end
+
   @doc """
   Returns the last primary key value of a table
   """
-  @spec get_sequence_id(model() | String.t()) :: primary_key()
-  def get_sequence_id(%Ecto.Changeset{data: data}) do
-    get_sequence_id(data)
+  @spec get_sequence_id(model() | String.t(), Keyword.t()) :: primary_key()
+  def get_sequence_id(schema_changeset_or_table_name, opts \\ [])
+
+  def get_sequence_id(%Ecto.Changeset{data: data}, opts) do
+    get_sequence_id(data, opts)
   end
 
-  def get_sequence_id(%schema{}) do
+  def get_sequence_id(%schema{}, opts) do
     :source
     |> schema.__schema__()
-    |> get_sequence_id()
+    |> get_sequence_id(opts)
   end
 
-  def get_sequence_id(table_name) when is_binary(table_name) do
-    Ecto.Adapters.SQL.query!(RepoClient.repo(), "select last_value FROM #{table_name}_id_seq").rows
+  def get_sequence_id(table_name, opts) when is_binary(table_name) do
+    Ecto.Adapters.SQL.query!(Opt.repo(opts), "select last_value FROM #{table_name}_id_seq").rows
     |> List.first()
     |> List.first()
   end
@@ -133,18 +134,15 @@ defmodule PaperTrail.Serializer do
   @doc """
   Returns the model primary id
   """
-  @spec get_model_id(model()) :: primary_key()
-  def get_model_id(%Ecto.Changeset{data: data}), do: get_model_id(data)
+  @spec get_model_id(model(), Keyword.t()) :: primary_key()
+  def get_model_id(%Ecto.Changeset{data: data}, options), do: get_model_id(data, options)
 
-  def get_model_id(model) do
-    {_, model_id} = List.first(Ecto.primary_key(model))
+  def get_model_id(model, options) do
+    {_, model_id} = model |> Ecto.primary_key() |> List.first()
 
-    case PaperTrail.Version.__schema__(:type, :item_id) do
-      :integer ->
-        model_id
-
-      _ ->
-        "#{model_id}"
+    case Opt.version_schema(options).__schema__(:type, :item_id) do
+      :integer -> model_id
+      _ -> "#{model_id}"
     end
   end
 

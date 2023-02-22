@@ -7,7 +7,7 @@ defmodule PaperTrailTest.SimpleModeBangFunctions do
   alias SimpleCompany, as: Company
   alias SimplePerson, as: Person
   alias PaperTrailTest.MultiTenantHelper, as: MultiTenant
-  alias PaperTrail.RepoClient
+  alias PaperTrail.Opt
   alias PaperTrail.Serializer
 
   @create_company_params %{name: "Acme LLC", is_active: true, city: "Greenwich"}
@@ -17,7 +17,7 @@ defmodule PaperTrailTest.SimpleModeBangFunctions do
     facebook: "acme.llc"
   }
 
-  defdelegate repo, to: RepoClient
+  defdelegate repo, to: Opt
   defdelegate serialize(data), to: Serializer
 
   doctest PaperTrail

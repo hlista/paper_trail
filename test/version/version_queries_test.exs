@@ -5,11 +5,11 @@ defmodule PaperTrailTest.VersionQueries do
   alias SimpleCompany, as: Company
   alias SimplePerson, as: Person
   alias PaperTrailTest.MultiTenantHelper, as: MultiTenant
-  alias PaperTrail.RepoClient
+  alias PaperTrail.Opt
 
   import Ecto.Query
 
-  defdelegate repo, to: RepoClient
+  defdelegate repo, to: Opt
 
   setup_all do
     Application.put_env(:paper_trail, :repo, PaperTrail.Repo)

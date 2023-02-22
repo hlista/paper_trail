@@ -1,6 +1,6 @@
 defmodule PaperTrailTest.UUIDWithCustomNameTest do
   use ExUnit.Case
-  import PaperTrail.RepoClient, only: [repo: 0]
+  import PaperTrail.Opt, only: [repo: 0]
   alias PaperTrail.Version
   import Ecto.Query
 

@@ -2,8 +2,7 @@ defmodule PaperTrail.Multi do
   import Ecto.Changeset
 
   alias PaperTrail
-  alias PaperTrail.Version
-  alias PaperTrail.RepoClient
+  alias PaperTrail.Opt
   alias PaperTrail.Serializer
 
   defdelegate new(), to: Ecto.Multi
@@ -20,9 +19,9 @@ defmodule PaperTrail.Multi do
   defdelegate get_sequence_id(table_name), to: Serializer
   defdelegate add_prefix(schema, prefix), to: Serializer
   defdelegate get_item_type(data), to: Serializer
-  defdelegate get_model_id(model), to: Serializer
+  defdelegate get_model_id(model, options), to: Serializer
 
-  @default_transaction_options [
+  @default_options [
     origin: nil,
     meta: nil,
     originator: nil,
@@ -33,66 +32,63 @@ defmodule PaperTrail.Multi do
     ecto_options: []
   ]
 
-  def insert(%Ecto.Multi{} = multi, changeset, options \\ @default_transaction_options) do
-    model_key = options[:model_key] || :model
-    version_key = options[:version_key] || :version
-    initial_version_key = options[:initial_version_key] || :initial_version
-    ecto_options = options[:ecto_options] || []
+  def insert(%Ecto.Multi{} = multi, changeset, options \\ @default_options) do
+    options = Keyword.merge(@default_options, options)
 
-    case RepoClient.strict_mode() do
+    model_key = Keyword.fetch!(options, :model_key)
+    version_key = Keyword.fetch!(options, :version_key)
+    initial_version_key = Keyword.fetch!(options, :initial_version_key)
+    ecto_options = Keyword.fetch!(options, :ecto_options)
+
+    case Opt.strict_mode(options) do
       true ->
         multi
         |> Ecto.Multi.run(initial_version_key, fn repo, %{} ->
           version_id = get_sequence_id("versions") + 1
 
-          changeset_data =
-            Map.get(changeset, :data, changeset)
-            |> Map.merge(%{
-              id: get_sequence_id(changeset) + 1,
-              first_version_id: version_id,
-              current_version_id: version_id
-            })
-
-          initial_version = make_version_struct(%{event: "insert"}, changeset_data, options)
-          repo.insert(initial_version)
+          changeset
+          |> Map.get(:data, changeset)
+          |> Map.merge(%{
+            id: get_sequence_id(changeset) + 1,
+            first_version_id: version_id,
+            current_version_id: version_id
+          })
+          |> make_version_struct(:insert, options)
+          |> repo.insert(ecto_options)
         end)
         |> Ecto.Multi.run(model_key, fn repo, %{^initial_version_key => initial_version} ->
-          updated_changeset =
             changeset
             |> change(%{
               first_version_id: initial_version.id,
               current_version_id: initial_version.id
             })
-
-          repo.insert(updated_changeset, ecto_options)
+            |> repo.insert(ecto_options)
         end)
-        |> Ecto.Multi.run(version_key, fn repo,
-                                          %{
-                                            ^initial_version_key => initial_version,
-                                            ^model_key => model
-                                          } ->
-          target_version = make_version_struct(%{event: "insert"}, model, options) |> serialize()
-
-          Version.changeset(initial_version, target_version) |> repo.update
+        |> Ecto.Multi.run(version_key, fn repo, %{^initial_version_key => initial_version, ^model_key => model} ->
+          model
+          |> make_version_struct(:insert, options)
+          |> serialize()
+          |> then(&Opt.version_schema(options).changeset(initial_version, &1))
+          |> repo.update(ecto_options)
         end)
-
       _ ->
         multi
         |> Ecto.Multi.insert(model_key, changeset, ecto_options)
         |> Ecto.Multi.run(version_key, fn repo, %{^model_key => model} ->
-          version = make_version_struct(%{event: "insert"}, model, options)
-          repo.insert(version)
+          model
+          |> make_version_struct(:insert, options)
+          |> repo.insert(ecto_options)
         end)
     end
   end
 
-  def update(%Ecto.Multi{} = multi, changeset, options \\ @default_transaction_options) do
+  def update(%Ecto.Multi{} = multi, changeset, options \\ @default_options) do
     model_key = options[:model_key] || :model
     version_key = options[:version_key] || :version
     initial_version_key = options[:initial_version_key] || :initial_version
     ecto_options = options[:ecto_options] || []
 
-    case RepoClient.strict_mode() do
+    case Opt.strict_mode() do
       true ->
         multi
         |> Ecto.Multi.run(initial_version_key, fn repo, %{} ->
@@ -103,7 +99,7 @@ defmodule PaperTrail.Multi do
             })
 
           target_changeset = changeset |> Map.merge(%{data: version_data})
-          target_version = make_version_struct(%{event: "update"}, target_changeset, options)
+          target_version = make_version_struct(target_changeset, :update, options)
           repo.insert(target_version)
         end)
         |> Ecto.Multi.run(model_key, fn repo, %{^initial_version_key => initial_version} ->
@@ -128,13 +124,13 @@ defmodule PaperTrail.Multi do
           ecto_options ++ Keyword.take(options, [:returning])
         )
         |> Ecto.Multi.run(version_key, fn repo, %{^model_key => _model} ->
-          version = make_version_struct(%{event: "update"}, changeset, options)
+          version = make_version_struct(changeset, :update, options)
           repo.insert(version)
         end)
     end
   end
 
-  def insert_or_update(%Ecto.Multi{} = multi, changeset, options \\ @default_transaction_options) do
+  def insert_or_update(%Ecto.Multi{} = multi, changeset, options \\ @default_options) do
     case get_state(changeset) do
       :built ->
         insert(multi, changeset, options)
@@ -149,7 +145,7 @@ defmodule PaperTrail.Multi do
     end
   end
 
-  def delete(%Ecto.Multi{} = multi, struct, options \\ @default_transaction_options) do
+  def delete(%Ecto.Multi{} = multi, struct, options \\ @default_options) do
     model_key = options[:model_key] || :model
     version_key = options[:version_key] || :version
     ecto_options = options[:ecto_options] || []
@@ -157,17 +153,17 @@ defmodule PaperTrail.Multi do
     multi
     |> Ecto.Multi.delete(model_key, struct, ecto_options)
     |> Ecto.Multi.run(version_key, fn repo, %{} ->
-      version = make_version_struct(%{event: "delete"}, struct, options)
+      version = make_version_struct(struct, :delete, options)
       repo.insert(version, options)
     end)
   end
 
-  def commit(%Ecto.Multi{} = multi) do
-    repo = RepoClient.repo()
+  def commit(%Ecto.Multi{} = multi, opts \\ []) do
+    repo = Opt.repo(opts)
 
     transaction = repo.transaction(multi)
 
-    case RepoClient.strict_mode() do
+    case Opt.strict_mode(opts) do
       true ->
         case transaction do
           {:error, _, changeset, %{}} ->
