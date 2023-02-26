@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Papertrail.Install do
+defmodule Mix.Tasks.Papertrail.Gen.Migration do
   @shortdoc "generates paper_trail migration file for your database"
 
   use Mix.Task
@@ -26,7 +26,7 @@ defmodule Mix.Tasks.Papertrail.Install do
           add :originator_id, references(:users) # you can change :users to your own foreign key constraint
           add :origin,       :string, size: 50
           add :meta,         :map
-          
+
           # Configure timestamps type in config.ex :paper_trail :timestamps_type
           add :inserted_at,  :#{timestamps_type}, null: false
         end

@@ -9,7 +9,7 @@ defmodule PaperTrailStrictModeTest do
   alias StrictPerson, as: Person
   alias PaperTrail.Serializer
 
-  @repo PaperTrail.Opt.repo()
+  @repo PaperTrail.RepoClient.repo()
   @create_company_params %{name: "Acme LLC", is_active: true, city: "Greenwich"}
   @update_company_params %{
     city: "Hong Kong",

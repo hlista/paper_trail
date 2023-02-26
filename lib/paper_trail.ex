@@ -1,11 +1,75 @@
 defmodule PaperTrail do
-  alias PaperTrail.{SchemaContext, Serializer, Version}
+  alias PaperTrail.{
+    Opts,
+    Serializer,
+    Version
+  }
 
-  defdelegate get_version(record, options), to: SchemaContext
-  defdelegate get_version(module, id, options), to: SchemaContext
-  defdelegate get_versions(record, options), to: SchemaContext
-  defdelegate get_versions(module, id, options), to: SchemaContext
-  defdelegate get_current_model(version), to: SchemaContext
+  def get_versions(record, opts) do
+    record
+    |> Opts.version_schema(opts).by_versions(opts)
+    |> Opts.repo(opts).all(ecto_opts(opts))
+  end
+
+  def get_versions(version, id, opts) do
+    version
+    |> Opts.version_schema(opts).by_versions(id, opts)
+    |> Opts.repo(opts).all(ecto_opts(opts))
+  end
+
+  @doc """
+  ...
+  """
+  def get_version(record, opts) do
+    record
+    |> Opts.version_schema(opts).by_version(opts)
+    |> Opts.repo(opts).one(ecto_opts(opts))
+  end
+
+  def get_version(module, id, opts) do
+    module
+    |> Opts.version_schema(opts).by_version(id, opts)
+    |> Opts.repo(opts).one(ecto_opts(opts))
+  end
+
+  @doc """
+  ...
+  """
+  def get_current_model(version, opts \\ []) do
+    version
+    |> Opts.version_schema(opts).convert_item_type_to_existing_module()
+    |> Opts.repo(opts).get(ecto_opts(opts))
+  end
+
+  @doc """
+  ...
+  """
+  def get_count(opts \\ []) do
+    opts
+    |> Opts.version_schema(opts).by_count(opts)
+    |> Opts.repo(opts).one(ecto_opts(opts))
+  end
+
+  @doc """
+  ...
+  """
+  def get_first(opts \\ []) do
+    opts
+    |> Opts.version_schema(opts).by_first(opts)
+    |> Opts.repo(opts).one(ecto_opts(opts))
+  end
+
+  @doc """
+  ...
+  """
+  def get_last(opts \\ []) do
+    opts
+    |> Opts.version_schema(opts).by_last(opts)
+    |> Opts.repo(opts).one(ecto_opts(opts))
+  end
+
+  defp ecto_opts(opts), do: Keyword.get(opts, :ecto_options, [])
+
   defdelegate make_version_struct(version, model, options), to: Serializer
   defdelegate serialize(data), to: Serializer
   defdelegate get_sequence_id(table_name), to: Serializer

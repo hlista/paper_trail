@@ -2,7 +2,7 @@ defmodule PaperTrail.Multi do
   import Ecto.Changeset
 
   alias PaperTrail
-  alias PaperTrail.Opt
+  alias PaperTrail.Opts
   alias PaperTrail.Serializer
 
   defdelegate new(), to: Ecto.Multi
@@ -40,7 +40,7 @@ defmodule PaperTrail.Multi do
     initial_version_key = Keyword.fetch!(options, :initial_version_key)
     ecto_options = Keyword.fetch!(options, :ecto_options)
 
-    case Opt.strict_mode(options) do
+    case Opts.strict_mode?(options) do
       true ->
         multi
         |> Ecto.Multi.run(initial_version_key, fn repo, %{} ->
@@ -68,7 +68,7 @@ defmodule PaperTrail.Multi do
           model
           |> make_version_struct(:insert, options)
           |> serialize()
-          |> then(&Opt.version_schema(options).changeset(initial_version, &1))
+          |> then(&Opts.version_schema(options).changeset(initial_version, &1))
           |> repo.update(ecto_options)
         end)
       _ ->
@@ -88,7 +88,7 @@ defmodule PaperTrail.Multi do
     initial_version_key = options[:initial_version_key] || :initial_version
     ecto_options = options[:ecto_options] || []
 
-    case Opt.strict_mode() do
+    case Opts.strict_mode?(options) do
       true ->
         multi
         |> Ecto.Multi.run(initial_version_key, fn repo, %{} ->
@@ -159,11 +159,11 @@ defmodule PaperTrail.Multi do
   end
 
   def commit(%Ecto.Multi{} = multi, opts \\ []) do
-    repo = Opt.repo(opts)
+    repo = Opts.repo(opts)
 
     transaction = repo.transaction(multi)
 
-    case Opt.strict_mode(opts) do
+    case Opts.strict_mode?(opts) do
       true ->
         case transaction do
           {:error, _, changeset, %{}} ->
@@ -192,4 +192,5 @@ defmodule PaperTrail.Multi do
             "PaperTrail.insert_or_update!/2 is not supported. " <>
             "Please use an Ecto.Changeset"
   end
+
 end

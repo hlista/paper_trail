@@ -8,7 +8,7 @@ defmodule PaperTrailTest do
   alias SimplePerson, as: Person
   alias PaperTrail.Serializer
 
-  @repo PaperTrail.Opt.repo()
+  @repo PaperTrail.RepoClient.repo()
   @create_company_params %{
     name: "Acme LLC",
     is_active: true,

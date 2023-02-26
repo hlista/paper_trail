@@ -3,7 +3,7 @@ defmodule PaperTrailTest.Version do
 
   alias PaperTrail.Version
   alias PaperTrailTest.MultiTenantHelper, as: MultiTenant
-  alias PaperTrail.Opt
+  alias PaperTrail.RepoClient
   alias PaperTrail.Serializer
 
   @valid_attrs %{
@@ -16,7 +16,7 @@ defmodule PaperTrailTest.Version do
   }
   @invalid_attrs %{}
 
-  defdelegate repo, to: Opt
+  defdelegate repo, to: RepoClient
   defdelegate serialize(data), to: Serializer
 
   setup_all do

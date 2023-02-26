@@ -70,13 +70,13 @@ defmodule SimpleCompany do
   end
 
   def count do
-    from(record in __MODULE__, select: count(record.id)) |> PaperTrail.Opt.repo().one
+    from(record in __MODULE__, select: count(record.id)) |> PaperTrail.RepoClient.repo().one
   end
 
   def count(:multitenant) do
     from(record in __MODULE__, select: count(record.id))
     |> MultiTenant.add_prefix_to_query()
-    |> PaperTrail.Opt.repo().one
+    |> PaperTrail.RepoClient.repo().one
   end
 end
 
@@ -121,13 +121,13 @@ defmodule SimplePerson do
   end
 
   def count do
-    from(record in __MODULE__, select: count(record.id)) |> PaperTrail.Opt.repo().one
+    from(record in __MODULE__, select: count(record.id)) |> PaperTrail.RepoClient.repo().one
   end
 
   def count(:multitenant) do
     from(record in __MODULE__, select: count(record.id))
     |> MultiTenant.add_prefix_to_query()
-    |> PaperTrail.Opt.repo().one
+    |> PaperTrail.RepoClient.repo().one
   end
 end
 

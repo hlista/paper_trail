@@ -1,4 +1,4 @@
-defmodule PaperTrail.Version do
+defmodule <%= :"#{Macro.camelize("#{app_name}")}.Version" %> do
   @moduledoc """
   PaperTrail.Version Schema
 
@@ -37,14 +37,13 @@ defmodule PaperTrail.Version do
     field :meta, :map
 
     if Config.originator() do
-      belongs_to Config.originator()[:name],
-                 Config.originator()[:model],
-                 Keyword.merge(
-                   Config.originator_relationship_opts(),
-                   define_field: false,
-                   foreign_key: :originator_id,
-                   type: Config.originator_type()
-                 )
+      belongs_to Config.originator()[:name], Config.originator()[:model],
+        Keyword.merge(
+          Config.originator_relationship_opts(),
+          define_field: false,
+          foreign_key: :originator_id,
+          type: Config.originator_type()
+        )
     end
 
     timestamps updated_at: false, type: Config.timestamps_type()
@@ -127,7 +126,7 @@ defmodule PaperTrail.Version do
   end
 
   defp version_query(item_type, id, options) do
-    from(v in Version, where: v.item_type == ^item_type and v.item_id == ^id)
+    (from v in Version, where: v.item_type == ^item_type and v.item_id == ^id)
     |> maybe_transform_query(options)
   end
 
