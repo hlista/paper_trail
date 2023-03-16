@@ -3,6 +3,7 @@ defmodule PaperTrail.Serializer do
   Serialization functions to create a version struct
   """
 
+  alias Papertrail.Config
   alias PaperTrail.Opts
   alias PaperTrail.Version
 
@@ -15,12 +16,8 @@ defmodule PaperTrail.Serializer do
   """
   @spec make_version_struct(model(), :insert | :update | :delete, options()) :: Version.t()
   def make_version_struct(model, :insert, options) do
-    originator = options[:originator]
-    originator_ref =
-      case Keyword.get(options, originator[:name], originator) do
-        nil -> originator
-        ref -> ref
-      end
+    originator = Config.originator()
+    originator_ref = options[originator[:name]] || options[:originator]
 
     options
     |> version_schema()
@@ -37,12 +34,8 @@ defmodule PaperTrail.Serializer do
   end
 
   def make_version_struct(changeset, :update, options) do
-    originator = options[:originator]
-    originator_ref =
-      case Keyword.get(options, originator[:name], originator) do
-        nil -> originator
-        ref -> ref
-      end
+    originator = Config.originator()
+    originator_ref = options[originator[:name]] || options[:originator]
 
     options
     |> version_schema()
@@ -59,12 +52,8 @@ defmodule PaperTrail.Serializer do
   end
 
   def make_version_struct(model_or_changeset, :delete, options) do
-    originator = options[:originator]
-    originator_ref =
-      case Keyword.get(options, originator[:name], originator) do
-        nil -> originator
-        ref -> ref
-      end
+    originator = Config.originator()
+    originator_ref = options[originator[:name]] || options[:originator]
 
     options
     |> version_schema()
