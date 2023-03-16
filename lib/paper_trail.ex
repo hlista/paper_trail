@@ -112,7 +112,7 @@ defmodule PaperTrail do
   def insert_or_update(changeset, options \\ []) do
     PaperTrail.Multi.new()
     |> PaperTrail.Multi.insert_or_update(changeset, options)
-    |> PaperTrail.Multi.commit()
+    |> PaperTrail.Multi.commit(options)
   end
 
   @doc """
@@ -135,7 +135,7 @@ defmodule PaperTrail do
   def update(changeset, options \\ []) do
     PaperTrail.Multi.new()
     |> PaperTrail.Multi.update(changeset, options)
-    |> PaperTrail.Multi.commit()
+    |> PaperTrail.Multi.commit(options)
   end
 
   @doc """
@@ -158,7 +158,7 @@ defmodule PaperTrail do
   def delete(model_or_changeset, options \\ []) do
     PaperTrail.Multi.new()
     |> PaperTrail.Multi.delete(model_or_changeset, options)
-    |> PaperTrail.Multi.commit()
+    |> PaperTrail.Multi.commit(options)
   end
 
   @doc """
