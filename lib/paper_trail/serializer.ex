@@ -3,7 +3,7 @@ defmodule PaperTrail.Serializer do
   Serialization functions to create a version struct
   """
 
-  alias Papertrail.Config
+  alias PaperTrail.Config
   alias PaperTrail.Opts
   alias PaperTrail.Version
 
